@@ -1,24 +1,6 @@
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8',...extra}});
 const now=()=>new Date().toISOString();
 const uid=()=>crypto.randomUUID();
-function translitSearch(s){
- const map={'अ':'a','आ':'aa','इ':'i','ई':'ee','उ':'u','ऊ':'oo','ऋ':'ri','ए':'e','ऐ':'ai','ओ':'o','औ':'au','क':'k','ख':'kh','ग':'g','घ':'gh','ङ':'ng','च':'ch','छ':'chh','ज':'j','झ':'jh','ञ':'ny','ट':'t','ठ':'th','ड':'d','ढ':'dh','ण':'n','त':'t','थ':'th','द':'d','ध':'dh','न':'n','प':'p','फ':'ph','ब':'b','भ':'bh','म':'m','य':'y','र':'r','ल':'l','व':'v','श':'sh','ष':'sh','स':'s','ह':'h','ळ':'l','ा':'aa','ि':'i','ी':'ee','ु':'u','ू':'oo','ृ':'ri','े':'e','ै':'ai','ो':'o','ौ':'au','ं':'n','ँ':'n','ः':'h','ऽ':'','्':'','।':' '};
- let out=''; const chars=[...String(s||'')];
- for(let i=0;i<chars.length;i++){const c=chars[i];if(map[c]!==undefined){const v=map[c];if('ािीुूृेैोौ'.includes(c))out=out.replace(/a$/,'')+v;else if(c==='्')out=out.replace(/a$/,'');else if(/[क-हळ]/.test(c))out+=v+'a';else out+=v;}else out+=c;}
- return out.toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
-}
-function searchForms(s){
- const raw=String(s||'').toLowerCase().trim(), tr=translitSearch(s);
- const compact=v=>v.replace(/aa/g,'a').replace(/ee/g,'i').replace(/oo/g,'u').replace(/([a-z])a$/,'$1');
- const a=new Set([raw,tr,compact(tr),compact(raw)]); [...a].forEach(v=>{if(v.endsWith('a'))a.add(v.slice(0,-1));}); return [...a].filter(Boolean);
-}
-function bilingualMatch(q,x){
- const fields=[x.title,x.excerpt,x.content,x.category,x.tags].filter(Boolean);
- const raw=fields.join(' ').toLowerCase(), forms=searchForms(fields.join(' '));
- const qf=searchForms(q);
- return !q || raw.includes(String(q).toLowerCase()) || qf.some(v=>forms.some(f=>f.includes(v)));
-}
-
 async function sha256(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 function b64(bytes){let s='';bytes.forEach(x=>s+=String.fromCharCode(x));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 function unb64(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const bin=atob(s);return Uint8Array.from(bin,c=>c.charCodeAt(0))}
@@ -86,7 +68,7 @@ try{
  if(path==='auth/login'&&request.method==='POST'){const b=await request.json();const email=text(b.email).toLowerCase(),password=String(b.password||'');const u=await env.DB.prepare('SELECT * FROM users WHERE email=?').bind(email).first();if(!u||!(await verifyPassword(password,u.password_hash)))return json({error:'Email या password गलत है'},401);return await doLogin(u.id,u.email,env)}
  if(path==='auth/logout'&&request.method==='POST'){const m=request.headers.get('cookie')||'',token=(m.match(/(?:^|; )kkp_session=([^;]+)/)||[])[1];if(token)await env.DB.prepare('DELETE FROM sessions WHERE token_hash=?').bind(await sha256(token)).run();return json({ok:true},200,{'set-cookie':clearCookie()})}
  if(path==='auth/me'&&request.method==='GET'){const u=await currentUser(request,env);return json({user:u})}
- if(path==='stories'&&request.method==='GET'){await seedIfEmpty(env);const q=text(url.searchParams.get('q'));let sql='SELECT * FROM stories ORDER BY created_at DESC';let r=await env.DB.prepare(sql).all();let rows=r.results||[];if(q)rows=rows.filter(x=>bilingualMatch(q,x));return json({items:rows})}
+ if(path==='stories'&&request.method==='GET'){await seedIfEmpty(env);const q=text(url.searchParams.get('q')).toLowerCase();let sql='SELECT * FROM stories ORDER BY created_at DESC';let r=await env.DB.prepare(sql).all();let rows=r.results||[];if(q)rows=rows.filter(x=>JSON.stringify(x).toLowerCase().includes(q)||x.title.toLowerCase().includes(q));return json({items:rows})}
  if(path==='story'&&request.method==='GET'){const id=text(url.searchParams.get('id'));const r=await env.DB.prepare('SELECT * FROM stories WHERE id=?').bind(id).first();if(!r)return json({error:'कहानी नहीं मिली'},404);await env.DB.prepare('UPDATE stories SET views=views+1 WHERE id=?').bind(id).run();r.views=(r.views||0)+1;return json({item:r})}
  if(path==='posts'&&request.method==='GET'){await seedPostsIfEmpty(env);const type=text(url.searchParams.get('type'));if(!['news','blog'].includes(type))return json({error:'Invalid type'},400);const r=await env.DB.prepare('SELECT * FROM posts WHERE type=? AND status="published" ORDER BY COALESCE(published_at,created_at) DESC').bind(type).all();return json({items:r.results||[]})}
  if(path==='post'&&request.method==='GET'){const id=text(url.searchParams.get('id'));const r=await env.DB.prepare('SELECT * FROM posts WHERE id=? AND status="published"').bind(id).first();return r?json({item:r}):json({error:'Post नहीं मिला'},404)}
