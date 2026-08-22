@@ -6,10 +6,5 @@ pages_build_output_dir = "."
 binding = "DB"
 database_name = "kahanikapitara-db"
 database_id = "38238d09-90de-40b3-813f-28bff8850ce4"
-
-[[r2_buckets]]
-binding = "MEDIA"
-bucket_name = "kahanikapitara-media"
-
 [vars]
 BOOTSTRAP_ADMIN_EMAIL = "Jivaibhav650@gmail.com"
