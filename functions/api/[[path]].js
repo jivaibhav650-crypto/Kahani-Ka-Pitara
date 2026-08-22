@@ -4,7 +4,7 @@ const uid=()=>crypto.randomUUID();
 async function sha256(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 function b64(bytes){let s='';bytes.forEach(x=>s+=String.fromCharCode(x));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 function unb64(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const bin=atob(s);return Uint8Array.from(bin,c=>c.charCodeAt(0))}
-async function passwordHash(password,salt=b64(crypto.getRandomValues(new Uint8Array(16)))){const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:unb64(salt),iterations:120000,hash:'SHA-256'},key,256);return `${salt}.${b64(new Uint8Array(bits))}`}
+async function passwordHash(password,salt=b64(crypto.getRandomValues(new Uint8Array(16)))){const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:unb64(salt),iterations:100000,hash:'SHA-256'},key,256);return `${salt}.${b64(new Uint8Array(bits))}`}
 async function verifyPassword(password,stored){const [salt,val]=stored.split('.');const h=await passwordHash(password,salt);return h===stored}
 function cookie(token){return `kkp_session=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`}
 function clearCookie(){return 'kkp_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0'}
