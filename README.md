@@ -21,3 +21,12 @@ Deploy के बाद Profile से अपना admin account बनाक�
 
 ## Fixed build
 Admin page now includes direct first-time signup. If the D1 stories table is empty, the API automatically seeds six starter stories on first public request. This is only a fallback; existing stories are never deleted.
+
+
+## Master upgrade included
+- Existing Cloudflare Pages + D1 architecture preserved.
+- Existing private user-to-user chat endpoints and UI preserved.
+- Bilingual Hindi/Roman-English search aliases expanded.
+- Story seeding grows the catalog up to 50 stories without deleting existing rows.
+- News/Blog seeding grows the catalog up to 50 posts without deleting existing rows.
+- The supplied JSZip browser wrapper is a ZIP-builder utility, so it was not injected into production pages; its useful backend/data concepts were merged safely into the existing project.
